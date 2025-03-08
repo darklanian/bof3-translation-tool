@@ -6,21 +6,26 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 from PIL import ImagePalette
+import os
 
 version = '1.6.1'
 
 # Map of files containing graphics to dump
 gfx_map = {
     'ENDKANJI.1.bin': '4b.128w.128x32.256r',
+    'ENDKANJI.2.bin': '4b.128w.128x32.256r',
     'FIRST.4.bin': '4b.128w.128x32.256r',
+    'FIRST.5.bin': '4b.128w.128x32.256r',
+    'FIRST.6.bin': '4b.128w.128x32.256r',
+    'FIRST.7.bin': '4b.128w.128x32.256r',
+    'FIRST.15.bin': '4b.256w.256x32.256r',
+    'BATL_RET.7.bin': '4b.128w.128x32.256r',
     'SCENA17.3.bin': '4b.128w.128x32.256r',
     'BATL_OVR.2.bin': '8b.64w.64x32.256r',
     'LOAD.1.bin': '4b.128w.128x32.256r',
     'START.6.bin': '4b.128w.128x32.256r',
     'BATL_DRA.1.bin': '8b.64w.64x32.128r',
     'DEMO.6.bin': '8b.64w.64x32.256r',
-    'FIRST.5.bin': '4b.128w.128x32.256r',
-    'FIRST.6.bin': '4b.128w.128x32.256r',
     'TURIMODE.4.bin': '8b.64w.64x32.1024r',
     'TURISHAR.2.bin': '8b.64w.64x32.256r',
     'TURISHAR.3.bin': '8b.64w.64x32.256r',
@@ -41,7 +46,6 @@ gfx_map = {
     'COMMU01.1.bin': '4b.128w.128x32.256r',
     'COMMU02B.1.bin': '4b.128w.128x32.256r',
     'COMMU05.1.bin': '4b.128w.128x32.256r',
-    'FIRST.5.bin': '4b.128w.128x32.256r',
     'SHISU.2.bi': '4b.128w.128x32.256r',
     'SHOP.2.bin': '4b.128w.128x32.256r',
     'SISYOU.2.bin': '4b.128w.128x32.256r',
@@ -264,7 +268,14 @@ def decode_text(data, extra_table):
         b = data[data_offset]
         data_offset += 1
 
-        if b == 0x00: # <END>
+        # handle 2 byte character
+        if b == 0x12 or b == 0x13 or b == 0x15:
+            b = b<<8 | data[data_offset]
+            data_offset += 1
+
+        if format(b, '02x') in extra_table:
+            text += extra_table[format(b, '02x')]
+        elif b == 0x00: # <END>
             text += '<END>'
         elif b == 0x01: # <NL>
             text += '<NL>'
@@ -439,8 +450,6 @@ def decode_text(data, extra_table):
             text += '%'
         elif b == 0xFF: # space
             text += ' '
-        elif format(b, '02x') in extra_table:
-            text += extra_table[format(b, '02x')]
         else:
             text += f'<HEX {b:02x}>'
 
@@ -541,7 +550,9 @@ def encode_text(data, extra_table):
                     print(f'Tag <{" ".join(tag)}> not managed, skipped')
         else:
             # Normal characters
-            if ord(b) >= 0x30 and ord(b) <= 0x39: # 0-9
+            if b in extra_table:
+                text_bytes = np.hstack((text_bytes, np.array(bytearray.fromhex(extra_table[b]), dtype=np.ubyte)))
+            elif ord(b) >= 0x30 and ord(b) <= 0x39: # 0-9
                 text_bytes = np.hstack((text_bytes, np.frombuffer(b.encode('utf8'), dtype=np.ubyte)))
             elif b == '(': # (
                 text_bytes = np.hstack((text_bytes, np.array([0x3A], dtype=np.ubyte)))
@@ -621,8 +632,6 @@ def encode_text(data, extra_table):
                 text_bytes = np.hstack((text_bytes, np.array([0x93], dtype=np.ubyte)))
             elif b == ' ': # space
                 text_bytes = np.hstack((text_bytes, np.array([0xFF], dtype=np.ubyte)))
-            elif b in extra_table:
-                text_bytes = np.hstack((text_bytes, np.array(bytearray.fromhex(extra_table[b]), dtype=np.ubyte)))
             else:
                 raise Exception(f'Character "{b}" in string "{data}" is not allowed.')
 
@@ -687,11 +696,13 @@ def unpack(input, output_dir='', dump_txt=False, dump_gfx=False, extra_table={},
 
         is_sound = data_block_crc in ['70424156', '50504844'] # PSX pBAV / PSP PPHP
         is_graphic = data_block_type == '0300'
-        is_text = data_block_ram_location in ['80010000', '00010000', '8001A000', '0001A000', '00596000'] # PSX / PSP Texts
+        is_text = data_block_ram_location in ['80010000', '00010000', '8001A000', '0001A000', '00596000', '00014000'] # PSX / PSP Texts
         is_clut = False
         if int(data_block_ram_location, 16) > 0x80033000 and int(data_block_ram_location, 16) < 0x80037000: # PSX CLUTs
             is_clut = True
         elif int(data_block_ram_location, 16) > 0x00033000 and int(data_block_ram_location, 16) < 0x00037000: # PSP CLUTs
+            is_clut = True
+        elif int(data_block_ram_location, 16) > 0x0002B000 and int(data_block_ram_location, 16) < 0x0003F000: # PSP(Japan) CLUTs
             is_clut = True
 
         data_block = {
@@ -1544,11 +1555,29 @@ def merge_images(inputs, output, bpp, tile_w, tile_h, resize_width):
 def main(command_line=None):
     # Parser for extra table characters
     class ParseExtraTable(argparse.Action):
+        def put_value(self, namespace, value, reverse = False):
+            key, value = value.split('=')
+            if reverse:
+                getattr(namespace, self.dest)[value] = key
+            else:
+                getattr(namespace, self.dest)[key] = value
+
         def __call__(self, parser, namespace, values, option_string=None):
             setattr(namespace, self.dest, dict())
             for value in values:
-                key, value = value.split('=')
-                getattr(namespace, self.dest)[key] = value
+                if value.startswith('@'):
+                    file = value[1:]
+                    reverse = True
+                else:
+                    file = value
+                    reverse = False
+                if os.path.exists(file):
+                    with open(file, 'rt', encoding='utf-8') as f:
+                        while line := f.readline():
+                            line = line.strip()
+                            self.put_value(namespace, line, reverse)
+                else:
+                    self.put_value(namespace, value)
 
     parser = argparse.ArgumentParser(prog='bof3tool.py', description='Breath of Fire III Tool (PSX/PSP)')
     subparser = parser.add_subparsers(help='Description', required=True, dest='command')
