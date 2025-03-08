@@ -20,6 +20,13 @@ python bof3tool.py reinsert -i AREA024.13.bin.json -o AREA024.13.bin --extra-tab
 
 3. is_text와 is_clut가 일본어 버전 PSP ROM에 대응할 수 있게 조건을 수정했습니다.
 
+4. 한글로 번역된 text json으로부터 한글 extra_table을 생성하는 명령어 추가
+```
+python bof3tool.py createkrtbl -i AREA024.13.bin.kr.json -o extra_table_kr.txt -c char_counter_kr.txt
+```
+다른 번역 파일에 포함된 문자도 포함시키기 위해서 char_counter_kr.txt파일로 한글 문자의 출현 빈도를 저장함.   
+extra_table_kr.txt는 char_counter_kr.txt의 출현 빈도로 정렬되어 저장됨.
+
 일본어 버전 PSP 롬 분석
 
 일본어 한자 폰트는 2세트로 되어 있습니다.   

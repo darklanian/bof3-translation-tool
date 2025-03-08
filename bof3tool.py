@@ -7,6 +7,7 @@ from pathlib import Path
 from PIL import Image
 from PIL import ImagePalette
 import os
+from collections import defaultdict
 
 version = '1.6.1'
 
@@ -1552,6 +1553,57 @@ def merge_images(inputs, output, bpp, tile_w, tile_h, resize_width):
 
     print('Done')
 
+def create_kr_table(input, output, charcounter):
+    if output:
+        output = Path(output)
+    else:
+        output = Path('extra_table_kr.txt')
+
+    counter = defaultdict(int)
+
+    if charcounter:
+        charcounter = Path(charcounter)
+    else:
+        charcounter = Path('char_counter_kr.txt')
+    
+    if charcounter.exists():
+        with open(charcounter, 'rt', encoding='utf-8') as f:
+            while line := f.readline():
+                k, v = line.split(',')
+                counter[k] = int(v)
+
+    with open(input, 'rt', encoding='utf-8') as f:
+        while line := f.readline():
+            for ch in line.strip():
+                unicode = ord(ch)
+                if unicode >= 0xAC00 and unicode <= 0xD7AF:
+                    counter[ch] += 1
+
+    sorted_data = sorted(counter.items(), key=lambda item: item[1], reverse=True)
+    with open(charcounter, 'wt', encoding='utf-8') as f:
+        for k, v in sorted_data:
+            f.write(f'{k},{v}\n')
+
+    extra_table = []
+    index = 0x1200
+    for k, v in sorted_data[0:441]:
+        extra_table.append((k, index))
+        index += 1
+    if len(sorted_data) > 441:
+        index = 0x1a00
+        for k, v in sorted_data[441:882]:
+            extra_table.append((k, index))
+            index += 1
+    if len(sorted_data) > 882:
+        print('not included in font set')
+        for k, v in sorted_data[882:]:
+            print(f'{k} : {v}')
+    with open(output, 'wt', encoding='utf-8') as f:
+        for k, i in extra_table:
+            f.write(f'{k}={i:04x}\n')
+        
+    print('Done')
+
 def main(command_line=None):
     # Parser for extra table characters
     class ParseExtraTable(argparse.Action):
@@ -1698,6 +1750,11 @@ def main(command_line=None):
     merge.add_argument('--tile-height', dest='tile_h', help='tile height', type=int, required=True)
     merge.add_argument('--resize-width', dest='resize_width', help='resize width', type=int, required=True)
 
+    createkrtbl = subparser.add_parser('createkrtbl', help='create an extra table for text json file which is translated in Korean')
+    createkrtbl.add_argument('-i', '--input', help='input text json file', type=Path, required=True, nargs='*')
+    createkrtbl.add_argument('-o', '--output', help='output extra table file', type=str, required=False, default=None)
+    createkrtbl.add_argument('-c', '--charcounter', help='character counter file', type=str, required=False, default=None)
+    
     parser.add_argument('-v', '--version', action='version', version=f'{parser.prog} {version}')
     args = parser.parse_args(command_line)
 
@@ -1748,6 +1805,9 @@ def main(command_line=None):
                 split_image(input=path, output=args.output, bpp=args.bpp, tile_w=args.tile_w, tile_h=args.tile_h, resize_width=args.resize_width, quantity=args.quantity)
         elif args.command == 'merge':
             merge_images(inputs=args.input, output=args.output, bpp=args.bpp, tile_w=args.tile_w, tile_h=args.tile_h, resize_width=args.resize_width)
+        elif args.command == 'createkrtbl':
+            for path in args.input:
+                create_kr_table(input=path, output=args.output, charcounter=args.charcounter)
     except Exception as err:
         print(f'Error: {err}')
 
