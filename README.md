@@ -1,12 +1,12 @@
 # bof3-translation-tool
 Breath of Fire 3 Translation Tool
 
-이 git은 https://github.com/brisma/bof3-translation-tool 를 fork했습니다.
+이 git은 https://github.com/brisma/bof3-translation-tool 를 fork했습니다.   
 원 git은 일본어 버전을 지원하지 않기 때문에 한글 번역을 위해 일본어 버전을 지원하게 수정을 했습니다.
 
 원 git에서 수정한 점은 다음과 같습니다.
 1. --extra-table option의 argument로 파일 이름이 올 수 있게 했습니다.
-일본어 및 한글 문자를 모두 extra table로 처리하려는데, 기존의 {code}={char} or {char}={code}로 입력받는 방식은 비효율적이라 생각했습니다.
+일본어 및 한글 문자를 모두 extra table로 처리하려는데, 기존의 {code}={char} or {char}={code}로 입력받는 방식은 비효율적이라 생각했습니다.   
 그리고 파일 이름 앞에 @를 붙이면, {code}와 {char}의 자리를 서로 바꿔서 파싱하도록 했습니다.
 ```
 python bof3tool.py unpack -i AREA024.EMI -o unpacked --dump-text --extra-table extra_table_jp.txt
@@ -14,36 +14,42 @@ python bof3tool.py unpack -i AREA024.EMI -o unpacked --dump-text --extra-table e
 ```
 python bof3tool.py reinsert -i AREA024.13.bin.json -o AREA024.13.bin --extra-table extra_table_kr.txt @extra_table_jp.txt
 ```
-2. decode_text와 encode_text에서 기존 latin문자보다 extra table 문자가 더 먼저 처리되도록 수정했습니다.
-히라가나가 사용하는 범위가 latin 문자 소문자 영역 범위와 겹치기 때문입니다.
+
+2. decode_text와 encode_text에서 기존 latin문자보다 extra table 문자가 더 먼저 처리되도록 수정했습니다.   
+일본어 문자가 사용하는 범위가 latin 문자 소문자 영역 범위와 겹치기 때문입니다.
+
 3. is_text와 is_clut가 일본어 버전 PSP ROM에 대응할 수 있게 조건을 수정했습니다.
 
 일본어 버전 PSP 롬 분석
 
-일본어 한자 폰트는 2세트로 되어 있습니다.
-두번째 세트는 일본어 버전 PSP 롬에만 존재하는 것으로 보입니다.
+일본어 한자 폰트는 2세트로 되어 있습니다.   
+두번째 세트는 일본어 버전 PSP 롬에만 존재하는 것으로 보입니다.   
 한 세트는 21x21=441자로 되어 있어 총 882자를 사용할 수 있습니다.
 
-첫번째 세트는 다음 파일들에 중복으로 존재합니다.
-BATTLE/BATL_RET.EMI; BATL_RET.7.bin
-ETC/ENDKANJI.EMI; ENDKANJI.2.bin
-ETC/FIRST.EMI; FIRST.7.bin
+첫번째 세트는 다음 파일들에 중복으로 존재합니다.   
+BATTLE/BATL_RET.EMI; BATL_RET.7.bin   
+ETC/ENDKANJI.EMI; ENDKANJI.2.bin   
+ETC/FIRST.EMI; FIRST.7.bin   
+   
 ![font_jp_1](./img/font_jp_1.bmp)
+   
 format은 아래와 같습니다.
 ```
 --bpp 4 --width 128 --tile-width 128 --tile-height 32 --resize-witdth 256 
 ```
 코드는 0x1200부터 0x13b8까지 입니다.
 
-두번째 세트는 다음 파일에 들어 있습니다.
+두번째 세트는 다음 파일에 들어 있습니다.   
 ETC/FIRST.EMI; FIRST.15.bin
+   
 ![font_jp_2](./img/font_jp_2.bmp)
+   
 format은 아래와 같습니다.
 ```
 --bpp 4 --width 256 --tile-width 256 --tile-height 32 --resize-witdth 256 
 ```
 두번째 세트는 이미지를 보면, 441자를 다 사용하고 있지는 않습니다만,
-테스트해본 결과, 코드는 0x1a00부터 0xb8까지 유효한 것으로 보입니다.
+테스트해본 결과, 코드는 0x1a00부터 0xb8까지(441자) 유효한 것으로 보입니다.
 
 clut는 ETC/FIRST.EMI의 FIRST.10.bin을 사용하면 됩니다.
 
