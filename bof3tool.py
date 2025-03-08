@@ -270,7 +270,7 @@ def decode_text(data, extra_table):
         data_offset += 1
 
         # handle 2 byte character
-        if b == 0x12 or b == 0x13 or b == 0x15:
+        if b == 0x12 or b == 0x13 or b == 0x15 or b == 0x1a or b == 0x1b:
             b = b<<8 | data[data_offset]
             data_offset += 1
 
