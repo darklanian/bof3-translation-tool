@@ -24,14 +24,15 @@ python bof3tool.py reinsert -i AREA024.13.bin.json -o AREA024.13.bin --extra-tab
 
 3. is_text와 is_clut가 일본어 버전 PSP ROM에 대응할 수 있게 조건을 수정했습니다.
 
-4. 한글로 번역된 text json으로부터 한글 extra_table을 생성하는 명령어 추가
+4. 한글로 번역된 text json으로부터 한글 extra_table을 생성하는 명령어 추가  
+다른 번역 파일에 포함된 문자도 포함시키기 위해서 char_counter_kr.txt파일로 한글 문자의 출현 빈도를 저장함.  
+extra_table_kr.txt는 char_counter_kr.txt의 출현 빈도로 정렬되어 저장됨.
 
 ```cmd
 python bof3tool.py createkrtbl -i AREA024.13.bin.kr.json -o extra_table_kr.txt -c char_counter_kr.txt
 ```
 
-다른 번역 파일에 포함된 문자도 포함시키기 위해서 char_counter_kr.txt파일로 한글 문자의 출현 빈도를 저장함.  
-extra_table_kr.txt는 char_counter_kr.txt의 출현 빈도로 정렬되어 저장됨.
+
 
 일본어 버전 PSP 롬 분석
 
@@ -82,7 +83,7 @@ clut는 ETC/FIRST.EMI의 FIRST.10.bin을 사용하면 됩니다.
     - [Traduzione automatico con Amazon Translate (ML)](#traduzione-automatico-con-amazon-translate-ml)
     - [Reinserimento testo](#reinserimento-testo)
     - [Reinserimento del testo manualmente (Raw Reinsert)](#reinserimento-del-testo-manualmente-raw-reinsert)
-    - [Indicizzazione dei testi](#indicizzazione-dei-testi)
+    - [텍스트 인덱싱](#텍스트-인덱싱)
     - [Espansione testi indicizzati](#espansione-testi-indicizzati)
     - [Conversione grafica RAW in TIM/BMP](#conversione-grafica-raw-in-timbmp)
     - [Conversione grafica TIM/BMP in RAW](#conversione-grafica-timbmp-in-raw)
@@ -146,6 +147,7 @@ optional arguments:
 ```
 
 I comandi a disposizione sono:
+
 - **unpack**: estrae il contenuto dei file **EMI**
 - **pack**: ricostruisce il file **EMI** precedentemente estratto
 - **dump**: estrae il testo da un file **bin** in un file di testo **JSON**
@@ -173,10 +175,12 @@ python bof3tool.py unpack -i BIN/WORLD00/*.EMI -o unpacked/WORLD00
 Così facendo diremo di spacchettare tutti i file **EMI** contenuti nella cartella `BIN/WORLD00` all'interno della cartella `unpacked/WORLD00`.
 
 All'interno ci troveremo una struttura composta da:
+
 - un file **JSON** contenente le informazioni del file originale
 - una cartella contenente i file estratti dall'**EMI**
 
 Se al comando precedente aggiungiamo anche i parametri `--dump-text`, `--dump-graphic` e `--extra-table 9A=à 9B=ò...` avremo inoltre:
+
 - l'eventuale dump del testo rilevato in formato **JSON** (potrebbe non essere testo di gioco ma materiale di debug)
 - la grafica esportata in formato **BMP** secondo la mappa dei file conosciuti aventi grafica da tradurre (solo per debug, palette preimpostata)
 - nel dump dei testi saranno gestiti eventuali caratteri extra (ad es. le accentate)
@@ -291,13 +295,13 @@ Come si può notare il blocco di testo non è all'inizio del file ma parte da un
 
 Se volessimo estrarre questo blocco di testo possiamo utilizzare ad es. il seguente comando:
 
-```
+```cmd
 python bof3tool.py rawdump -i GAME.1.bin --offset 0x33164 --quantity 12 --skip 6 --repeat 92 --trim
 ```
 
 Il risultato sarà:
 
-```
+```text
 --- Breath of Fire III Tool (PSX/PSP) ---
 
 Raw dumped 12 byte of raw text from GAME.1.bin into GAME.1.bin.json 92 times
@@ -341,13 +345,13 @@ All'interno del **file JSON** generato saranno presenti tutte le informazioni ne
 
 Possiamo eventualmente aggiungere altri raw dump allo stesso **JSON** effettuando delle nuove estrazioni:
 
-```
+```cmd
 python bof3tool.py rawdump -i GAME.1.bin --offset 0x338DC --quantity 12 --skip 12 --repeat 83 --trim
 ```
 
 Risultato:
 
-```
+```text
 --- Breath of Fire III Tool (PSX/PSP) ---
 
 File GAME.1.bin.json with 1 raw dumps already exists, appending new raw dump...
@@ -356,13 +360,13 @@ Raw dumped 12 byte of raw text from GAME.1.bin into GAME.1.bin.json 83 times
 
 Infine potremmo voler estrarre dei byte senza decodificarli (ovvero ottenere dei **\<HEX xx\>**): in questo caso possiamo usare il parametro `--raw`, ad esempio:
 
-```
+```cmd
 python bof3tool.py rawdump -i GAME.1.bin --offset 0x20000 --quantity 5 --raw
 ```
 
 Risultato:
 
-```
+```text
 --- Breath of Fire III Tool (PSX/PSP) ---
 
 Raw dumped 5 byte of raw data from GAME.1.bin into GAME.1.bin.json 1 times
@@ -406,11 +410,11 @@ L'utilizzo richiede la creazione di un **account AWS** e la **configurazione del
 
 L'utilizzo è molto semplice:
 
-```
+```cmd
 python bof3tool.py translate -h
 ```
 
-```
+```text
 usage: bof3tool.py translate [-h] -i INPUT [-o OUTPUT] [--source-language SOURCE_LANG] --target-language TARGET_LANG [--verbose]
 
 optional arguments:
@@ -428,13 +432,13 @@ optional arguments:
 
 Ad esempio per tradurre tutti i testi indicizzati in un unico file:
 
-```
+```cmd
 python bof3tool.py translate -i strings_en.json -o strings_it.json --target-language it
 ```
 
 Dopo qualche minuto (dipende da quante righe di testo volete tradurre) otterremo:
 
-```
+```text
 --- Breath of Fire III Tool (PSX/PSP) ---
 
 Translating 6366 strings of blocks from 'en' to 'it' using Amazon Translate (ML)...
@@ -450,13 +454,13 @@ Nel repository, all'interno della cartella ***autotranslate*** potete trovare i 
 
 Allo stesso modo è possibile ricostruire un file **bin** di testo partendo da un **JSON** utilizzando:
 
-```
+```cmd
 python bof3tool.py reinsert -i AREA000.12.bin.json -o AREA000.12.bin --extra-table 9A=à 9B=ò...
 ```
 
 Il risultato che otterremo sarà:
 
-```
+```text
 --- Breath of Fire III Tool (PSX/PSP) ---
 
 Reinserting 256 strings from block0 of AREA000.12.bin.json into AREA000.12.bin...
@@ -475,7 +479,7 @@ Il suo funzionamento richiedere il **file JSON** contenente le modifiche da appl
 
 Per procedere al reinserimento possiamo utilizzare il comando `rawreinsert`:
 
-```
+```cmd
 python bof3tool.py rawreinsert -i GAME.1.bin.json
 ```
 
@@ -483,7 +487,7 @@ python bof3tool.py rawreinsert -i GAME.1.bin.json
 
 Il risultato che otterremo sarà:
 
-```
+```text
 --- Breath of Fire III Tool (PSX/PSP) ---
 
 File GAME.1.bin.json contains 2 raw dumps, reinserting...
@@ -494,21 +498,21 @@ Raw reinserted all raw dumps
 
 > **ATTENZIONE**: anche in questo caso è possibile sfruttare il parametro `--extra-table` per aggiungere ulteriori caratteri nell'inserimento.
 
-### Indicizzazione dei testi
+### 텍스트 인덱싱
 
-Moltissimi file di testo di Breath of Fire III contengono del testo ripetuto in quanto sono semplicemente le medesime scene con leggere variazioni (tempo/personaggi).
+많은 Breath of Fire III 텍스트 파일에는 약간의 변형(시간/문자)만 있는 동일한 장면이기 때문에 반복되는 텍스트가 포함되어 있습니다.
 
-Al fine di evitare di ritradurre le stesse frasi più e più volte è possibile indicizzarle in un unico grande file che conterrà, di fatto, il testo di tutto il gioco più un file di "puntatori" per l'espansione futura.
+동일한 문장을 반복해서 재번역하는 것을 피하기 위해 전체 게임의 텍스트와 향후 확장을 위한 "포인터" 파일을 포함하는 하나의 큰 파일로 해당 문장을 색인화하는 것이 가능합니다.
 
-Una volta raggruppati i **JSON** di tutti i testi in una cartella è sufficiente eseguire il seguente comando per indicizzare tutti i file:
+폴더에 있는 모든 텍스트의 **JSON**을 그룹화한 후 다음 명령을 실행하면 모든 파일의 색인이 생성됩니다:
 
-```
+```cmd
 python bof3tool.py index -i texts/*.json --output-strings strings_en.json --output-pointers pointers_en.json
 ```
 
-Il risultato sarà ad esempio:
+결과는 예를 들어 다음과 같습니다:
 
-```
+```text
 --- Breath of Fire III Tool (PSX/PSP) ---
 
 Indexing 169 JSON files into strings_en.json/pointers_en.json...
