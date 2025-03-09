@@ -1585,22 +1585,27 @@ def create_kr_table(input, output, charcounter):
             f.write(f'{k},{v}\n')
 
     extra_table = []
-    index = 0x1200
-    for k, v in sorted_data[0:441]:
+    index = 0x5b
+    for k, v in sorted_data[0:161]:
         extra_table.append((k, index))
         index += 1
-    if len(sorted_data) > 441:
-        index = 0x1a00
-        for k, v in sorted_data[441:882]:
+    if len(sorted_data) > 161:
+        index = 0x1200
+        for k, v in sorted_data[161:602]:
             extra_table.append((k, index))
             index += 1
-    if len(sorted_data) > 882:
+    if len(sorted_data) > 602:
+        index = 0x1a00
+        for k, v in sorted_data[602:1043]:
+            extra_table.append((k, index))
+            index += 1
+    if len(sorted_data) > 1043:
         print('not included in font set')
-        for k, v in sorted_data[882:]:
+        for k, v in sorted_data[1043:]:
             print(f'{k} : {v}')
     with open(output, 'wt', encoding='utf-8') as f:
         for k, i in extra_table:
-            f.write(f'{k}={i:04x}\n')
+            f.write(f'{k}={i:02x}\n')
         
     print('Done')
 
